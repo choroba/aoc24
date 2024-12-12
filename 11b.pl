@@ -9,9 +9,7 @@ use List::Util qw{ sum };
 
 my $STEP_COUNT = 75;
 
-sub change($n, $step) {
-    return $n if 0 == $step;
-
+sub change($n) {
     if ($n == 0) {
         return 1
 
@@ -30,11 +28,11 @@ my @stones = split ' ', <>;
 my %stone;
 ++$stone{$_} for @stones;
 
-for my $step (0 .. $STEP_COUNT) {
+for (1 .. $STEP_COUNT) {
 
     my %next;
     for my $stone (keys %stone) {
-        $next{$_} += $stone{$stone} for change($stone, $STEP_COUNT - $step);
+        $next{$_} += $stone{$stone} for change($stone);
     }
     %stone = %next;
 }

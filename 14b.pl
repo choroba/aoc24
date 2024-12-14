@@ -7,16 +7,6 @@ use feature qw{ say };
 use ARGV::OrDATA;
 use Time::HiRes qw{ usleep };
 
-sub move_to($x, $y) {
-    ++$y; ++$x;
-    print "\e[$y;${x}H"
-}
-
-sub clear() {
-    print "\e[2J";
-    move_to(0, 0);
-}
-
 my ($width, $height) = ARGV::OrDATA::is_using_argv() ? (101, 103) : (11, 7);
 
 my @robots;
@@ -28,31 +18,42 @@ while (<>) {
     }
 }
 
-clear();
-for my $y (1 .. $height) {
-    for my $x (1 .. $width) {
-        print '.';
-    }
-    print "\n";
-}
-
-my $step = 1; # 72, 173
-for (1 .. 7344) {
+# Discover the period and shift by inspecting the robots gathering in
+# the vertical middle third and horizontal top half. This might not
+# work for other inputs, watch a few iterations to find out.
+my $step = 1;
+my $x3 = int(($width  + 1) / 3);
+my $y2 = int(($height + 1) / 2);
+my ($shift, $period) = (1, 1);
+while (1) {
+    my @xthirds;
+    my @yhalves;
     for my $robot (@robots) {
         my ($x, $y, $vx, $vy) = @$robot;
-        move_to($x, $y);
-        $y = ($y + $vy) % $height;
-        $x = ($x + $vx) % $width;
-        print ' ';
+        $y = ($y + $period * $vy) % $height;
+        $x = ($x + $period * $vx) % $width;
         @$robot[0, 1] = ($x, $y);
-        move_to($x, $y);
-        print 'x'
+        ++$xthirds[ int($x / $x3) ];
+        ++$yhalves[ int($y / $y2) ] if 1 < $period;
     }
-    move_to(0, $height);
-    say $step++;
-    # usleep(500000) if $step++ == 7344;
+    last if 1 < $period && $yhalves[0] > $yhalves[1] * 2;
+    if (1 == $period && $xthirds[1] > $xthirds[0] + $xthirds[2]) {
+        if (1 == $shift) {
+            $shift = $step;
+        } elsif (1 == $period) {
+            $period = $step - $shift;
+        }
+    }
+    $step += $period;
 }
 
+my @grid;
+++$grid[ $_->[1] ][ $_->[0] ] for @robots;
+for my $row (@grid) {
+    say map $_ ? 'x' : ' ', @$row;
+}
+
+say "$period, $shift\n$step";
 
 __DATA__
 p=0,4 v=3,-3
